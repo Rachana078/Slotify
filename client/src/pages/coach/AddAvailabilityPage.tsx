@@ -30,7 +30,7 @@ export default function AddAvailabilityPage() {
       return;
     }
 
-    // Convert local date+time to UTC ISO strings so the server stores correct times
+    // Send ISO strings for correct UTC slot generation; keep HH:MM for storage
     const startISO = new Date(`${form.date}T${form.start_time}:00`).toISOString();
     const endISO = new Date(`${form.date}T${form.end_time}:00`).toISOString();
 
@@ -40,7 +40,7 @@ export default function AddAvailabilityPage() {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify({ ...form, start_time: startISO, end_time: endISO }),
+      body: JSON.stringify({ ...form, start_iso: startISO, end_iso: endISO }),
     });
 
     const body = await res.json();

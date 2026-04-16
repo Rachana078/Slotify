@@ -8,8 +8,8 @@ import type { CreateAvailabilityRequest } from '@coachbook/shared';
 const router = Router();
 
 router.post('/', requireAuth, requireCoach, async (req: Request, res: Response) => {
-  const { date, start_time, end_time, slot_duration_min = 60 } =
-    req.body as CreateAvailabilityRequest;
+  const { date, start_time, end_time, slot_duration_min = 60, start_iso, end_iso } =
+    req.body as CreateAvailabilityRequest & { start_iso?: string; end_iso?: string };
 
   if (!date || !start_time || !end_time) {
     res.status(400).json({ error: 'date, start_time, and end_time are required' });
@@ -30,8 +30,8 @@ router.post('/', requireAuth, requireCoach, async (req: Request, res: Response) 
     return;
   }
 
-  // Generate slots
-  const slots = generateSlots(date, start_time, end_time, slot_duration_min);
+  // Use ISO strings (with correct timezone) when provided by client
+  const slots = generateSlots(date, start_iso ?? start_time, end_iso ?? end_time, slot_duration_min);
 
   if (slots.length === 0) {
     res.status(400).json({ error: 'No slots fit within the given time window' });
