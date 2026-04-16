@@ -30,13 +30,17 @@ export default function AddAvailabilityPage() {
       return;
     }
 
+    // Convert local date+time to UTC ISO strings so the server stores correct times
+    const startISO = new Date(`${form.date}T${form.start_time}:00`).toISOString();
+    const endISO = new Date(`${form.date}T${form.end_time}:00`).toISOString();
+
     const res = await fetch('/api/availability', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${session.access_token}`,
       },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, start_time: startISO, end_time: endISO }),
     });
 
     const body = await res.json();
