@@ -101,22 +101,23 @@ router.delete('/:sessionId', requireAuth, async (req: Request, res: Response) =>
     cancellation_reason: reason ?? null,
   }).eq('id', sessionId);
 
-  // Notify booked parent when coach cancels
-  if (user.role === 'coach' && session.booked_parent_id) {
-    const startStr = new Date(session.start_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
-    const { data: parentTokens } = await supabaseAdmin
-      .from('fcm_tokens').select('token').eq('user_id', session.booked_parent_id).eq('user_type', 'parent');
-    if (parentTokens?.length) {
-      await Promise.allSettled(
-        parentTokens.map((t) => sendToUser(t.token, 'Session cancelled', `Your lesson on ${startStr} was cancelled by your coach.`, { url: '/my-bookings' }))
-      );
+  // Fire-and-forget: notify parent + promote waitlist (don't block the response)
+  (async () => {
+    if (user.role === 'coach' && session.booked_parent_id) {
+      const startStr = new Date(session.start_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+      const { data: parentTokens } = await supabaseAdmin
+        .from('fcm_tokens').select('token').eq('user_id', session.booked_parent_id).eq('user_type', 'parent');
+      if (parentTokens?.length) {
+        await Promise.allSettled(
+          parentTokens.map((t) => sendToUser(t.token, 'Session cancelled', `Your lesson on ${startStr} was cancelled by your coach.`, { url: '/my-bookings' }))
+        );
+      }
     }
-  }
+    const { promoteWaitlist } = await import('../services/waitlist');
+    await promoteWaitlist(sessionId, session.coach_id);
+  })().catch(console.error);
 
-  const { promoteWaitlist } = await import('../services/waitlist');
-  const promoted = await promoteWaitlist(sessionId, session.coach_id);
-
-  res.json({ session: { ...session, status: 'cancelled' }, promoted });
+  res.json({ session: { ...session, status: 'cancelled' }, promoted: false });
 });
 
 export default router;
