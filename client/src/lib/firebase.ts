@@ -1,5 +1,4 @@
 import { initializeApp } from 'firebase/app';
-import { getMessaging, getToken, onMessage, type Messaging } from 'firebase/messaging';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -9,32 +8,40 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+export const firebaseApp = initializeApp(firebaseConfig);
 
-// getMessaging() throws on iOS Safari (no web push support outside PWA mode)
-let messaging: Messaging | null = null;
-try {
-  messaging = getMessaging(app);
-} catch (e) {
-  console.warn('Firebase Messaging not supported in this browser:', e);
-}
-
-export { messaging };
-
+// Lazily load Firebase Messaging — the static import of 'firebase/messaging'
+// throws on iOS Safari (no web push support), crashing the whole app.
+// Dynamic import isolates the failure to only code paths that actually need FCM.
 export async function requestFcmToken(): Promise<string | null> {
-  if (!messaging) return null;
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return null;
 
+    const { getMessaging, getToken } = await import('firebase/messaging');
+    const messaging = getMessaging(firebaseApp);
     const token = await getToken(messaging, {
       vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
     });
     return token;
   } catch (err) {
-    console.error('FCM token error:', err);
+    console.warn('FCM token error (not supported in this browser):', err);
     return null;
   }
 }
 
-export { onMessage };
+// Returns an unsubscribe function, or a no-op if messaging isn't supported.
+export async function setupForegroundMessaging(
+  onNotification: (title: string, body: string) => void
+): Promise<() => void> {
+  try {
+    const { getMessaging, onMessage } = await import('firebase/messaging');
+    const messaging = getMessaging(firebaseApp);
+    return onMessage(messaging, (payload) => {
+      const { title = '', body = '' } = payload.notification ?? {};
+      if (title) onNotification(title, body);
+    });
+  } catch {
+    return () => {};
+  }
+}
