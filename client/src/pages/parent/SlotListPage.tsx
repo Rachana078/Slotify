@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { useParent } from '../../hooks/useParent';
-import { requestFcmToken } from '../../lib/firebase';
+import { requestFcmToken, setupForegroundMessaging } from '../../lib/firebase';
 
 interface Session {
   id: string;
@@ -24,6 +24,25 @@ export default function SlotListPage() {
     typeof Notification !== 'undefined' ? Notification.permission : 'denied'
   );
 
+  async function load() {
+    const res = await fetch(`/api/public/slots/${parentId}`);
+    if (!res.ok) { setError('Could not load slots.'); setLoading(false); return; }
+    const data = await res.json();
+    setSessions(data.sessions ?? []);
+    setLoading(false);
+  }
+
+  // Foreground push: show notification + reload slots when app is open
+  useEffect(() => {
+    if (!parentId) return;
+    let unsub: (() => void) | undefined;
+    setupForegroundMessaging((title, body) => {
+      if (typeof Notification !== 'undefined') new Notification(title, { body, icon: '/icons/icon-192.png' });
+      load();
+    }).then((fn) => { unsub = fn; });
+    return () => unsub?.();
+  }, [parentId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!parentId) return;
 
@@ -40,15 +59,8 @@ export default function SlotListPage() {
       });
     }
 
-    async function load() {
-      const res = await fetch(`/api/public/slots/${parentId}`);
-      if (!res.ok) { setError('Could not load slots.'); setLoading(false); return; }
-      const data = await res.json();
-      setSessions(data.sessions ?? []);
-      setLoading(false);
-    }
     load();
-  }, [parentId]);
+  }, [parentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function enableNotifications() {
     const token = await requestFcmToken();

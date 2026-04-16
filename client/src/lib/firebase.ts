@@ -10,9 +10,20 @@ const firebaseConfig = {
 
 export const firebaseApp = initializeApp(firebaseConfig);
 
-// Lazily load Firebase Messaging — the static import of 'firebase/messaging'
-// throws on iOS Safari (no web push support), crashing the whole app.
-// Dynamic import isolates the failure to only code paths that actually need FCM.
+async function getSwRegistration(): Promise<ServiceWorkerRegistration | undefined> {
+  if (!('serviceWorker' in navigator)) return undefined;
+  try {
+    // Use the vite-plugin-pwa SW (sw.js) which has Firebase properly initialized.
+    // Fall back to any active registration if sw.js isn't registered yet.
+    return (
+      (await navigator.serviceWorker.getRegistration('/sw.js')) ??
+      (await navigator.serviceWorker.ready)
+    );
+  } catch {
+    return undefined;
+  }
+}
+
 export async function requestFcmToken(): Promise<string | null> {
   try {
     if (typeof Notification === 'undefined') return null;
@@ -21,17 +32,18 @@ export async function requestFcmToken(): Promise<string | null> {
 
     const { getMessaging, getToken } = await import('firebase/messaging');
     const messaging = getMessaging(firebaseApp);
+    const serviceWorkerRegistration = await getSwRegistration();
     const token = await getToken(messaging, {
       vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+      serviceWorkerRegistration,
     });
     return token;
   } catch (err) {
-    console.warn('FCM token error (not supported in this browser):', err);
+    console.warn('FCM token error:', err);
     return null;
   }
 }
 
-// Returns an unsubscribe function, or a no-op if messaging isn't supported.
 export async function setupForegroundMessaging(
   onNotification: (title: string, body: string) => void
 ): Promise<() => void> {
