@@ -65,6 +65,32 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   res.json({ sessions: data });
 });
 
+// DELETE /api/sessions/open/all?date=YYYY-MM-DD — bulk-delete open slots (optionally filtered by date)
+router.delete('/open/all', requireAuth, async (req: Request, res: Response) => {
+  const user = req.user!;
+  if (user.role !== 'coach') { res.status(403).json({ error: 'Coaches only' }); return; }
+
+  const { date } = req.query as { date?: string };
+
+  let query = supabaseAdmin
+    .from('sessions')
+    .delete({ count: 'exact' })
+    .eq('coach_id', user.id)
+    .eq('status', 'open');
+
+  if (date) {
+    // Delete only slots that start on the given calendar date (any time that day)
+    query = query
+      .gte('start_time', `${date}T00:00:00.000Z`)
+      .lt('start_time', `${date}T23:59:59.999Z`);
+  }
+
+  const { error, count } = await query;
+
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ deleted: count ?? 0 });
+});
+
 router.delete('/:sessionId', requireAuth, async (req: Request, res: Response) => {
   const { sessionId } = req.params;
   const { reason } = req.body as { reason?: string };

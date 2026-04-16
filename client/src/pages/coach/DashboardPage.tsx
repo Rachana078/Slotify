@@ -30,6 +30,9 @@ export default function DashboardPage() {
   const [selected, setSelected] = useState<Session | null>(null);
   const [showQR, setShowQR] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showClearModal, setShowClearModal] = useState(false);
+  const [clearDate, setClearDate] = useState('');
+  const [clearingAll, setClearingAll] = useState(false);
   const { user } = useAuth();
 
   useFCM(true);
@@ -63,6 +66,12 @@ export default function DashboardPage() {
           </button>
           <button onClick={() => setShowQR((v) => !v)} className="text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50">
             QR Code
+          </button>
+          <button
+            onClick={() => { setClearDate(''); setShowClearModal(true); }}
+            className="text-sm text-red-500 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 transition"
+          >
+            Clear slots
           </button>
           <button onClick={() => navigate('/coach/history')} className="text-sm text-gray-600 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50">
             History
@@ -253,6 +262,59 @@ export default function DashboardPage() {
               className="mt-6 w-full border border-gray-300 rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
             >
               Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Clear slots modal */}
+      {showClearModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4" onClick={() => setShowClearModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-gray-800 mb-1">Clear open slots</h2>
+            <p className="text-sm text-gray-500 mb-5">Delete open (unbooked) slots — pick a date or clear everything.</p>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">Specific date (optional)</label>
+            <input
+              type="date"
+              value={clearDate}
+              onChange={(e) => setClearDate(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-5 focus:outline-none focus:ring-2 focus:ring-red-400"
+            />
+
+            <button
+              disabled={clearingAll}
+              onClick={async () => {
+                setClearingAll(true);
+                const { data: { session: auth } } = await supabase.auth.getSession();
+                if (!auth) { setClearingAll(false); return; }
+                const url = clearDate
+                  ? `/api/sessions/open/all?date=${clearDate}`
+                  : '/api/sessions/open/all';
+                const res = await fetch(url, {
+                  method: 'DELETE',
+                  headers: { Authorization: `Bearer ${auth.access_token}` },
+                });
+                if (res.ok) {
+                  if (clearDate) {
+                    setSessions((prev) => prev.filter((s) => s.start_time.slice(0, 10) !== clearDate));
+                  } else {
+                    setSessions([]);
+                  }
+                }
+                setClearingAll(false);
+                setShowClearModal(false);
+              }}
+              className="w-full bg-red-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-red-600 disabled:opacity-50 transition mb-3"
+            >
+              {clearingAll ? 'Deleting…' : clearDate ? `Delete open slots on ${clearDate}` : 'Delete ALL open slots'}
+            </button>
+
+            <button
+              onClick={() => setShowClearModal(false)}
+              className="w-full border border-gray-300 rounded-lg py-2 text-sm text-gray-600 hover:bg-gray-50 transition"
+            >
+              Cancel
             </button>
           </div>
         </div>
