@@ -50,8 +50,7 @@ router.post('/join/:coachId', async (req: Request, res: Response) => {
   if (studentError) { res.status(500).json({ error: studentError.message }); return; }
 
   if (fcmToken) {
-    await supabaseAdmin.from('fcm_tokens')
-      .upsert({ user_id: parentId, user_type: 'parent', token: fcmToken }, { onConflict: 'user_id' });
+    await supabaseAdmin.from('fcm_tokens').insert({ user_id: parentId, user_type: 'parent', token: fcmToken });
   }
 
   res.status(201).json({ parentId });
@@ -67,8 +66,9 @@ router.put('/fcm-token/:parentId', async (req: Request, res: Response) => {
     .from('parents').select('id').eq('id', parentId).single();
   if (!parent) { res.status(404).json({ error: 'Parent not found' }); return; }
 
-  await supabaseAdmin.from('fcm_tokens')
-    .upsert({ user_id: parentId, user_type: 'parent', token: fcmToken }, { onConflict: 'user_id' });
+  // Delete old tokens for this parent, then insert fresh one
+  await supabaseAdmin.from('fcm_tokens').delete().eq('user_id', parentId);
+  await supabaseAdmin.from('fcm_tokens').insert({ user_id: parentId, user_type: 'parent', token: fcmToken });
 
   res.json({ ok: true });
 });
