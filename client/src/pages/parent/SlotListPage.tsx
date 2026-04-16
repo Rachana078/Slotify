@@ -86,10 +86,43 @@ export default function SlotListPage() {
     setActionLoading(null);
   }
 
+  const [joinInput, setJoinInput] = useState('');
+  const [joinError, setJoinError] = useState('');
+
+  function handleJoinLink() {
+    setJoinError('');
+    try {
+      const url = new URL(joinInput.trim());
+      const match = url.pathname.match(/\/join\/(.+)/);
+      if (match) {
+        window.location.href = `/join/${match[1]}`;
+        return;
+      }
+    } catch {}
+    setJoinError('Paste the full join link your coach sent you.');
+  }
+
   if (!parentId) {
     return (
-      <div className="flex items-center justify-center min-h-screen px-4 text-center text-gray-500">
-        Ask your coach for the join link to get started.
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-md p-6 max-w-sm w-full text-center">
+          <p className="text-lg font-bold text-gray-800 mb-2">Get started</p>
+          <p className="text-sm text-gray-500 mb-4">Paste the join link your coach shared with you:</p>
+          <input
+            type="url"
+            value={joinInput}
+            onChange={(e) => setJoinInput(e.target.value)}
+            placeholder="https://…/join/…"
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          {joinError && <p className="text-xs text-red-500 mb-2">{joinError}</p>}
+          <button
+            onClick={handleJoinLink}
+            className="w-full bg-indigo-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-indigo-700 transition"
+          >
+            Continue
+          </button>
+        </div>
       </div>
     );
   }
