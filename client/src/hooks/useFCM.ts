@@ -12,7 +12,9 @@ export function useFCM(enabled: boolean) {
 
       // Set up foreground notifications (no-op if FCM not supported)
       const unsub = await setupForegroundMessaging((title, body) => {
-        new Notification(title, { body, icon: '/icons/icon-192.png' });
+        if (typeof Notification !== 'undefined') {
+          new Notification(title, { body, icon: '/icons/icon-192.png' });
+        }
       });
 
       return unsub;

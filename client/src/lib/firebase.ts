@@ -15,6 +15,7 @@ export const firebaseApp = initializeApp(firebaseConfig);
 // Dynamic import isolates the failure to only code paths that actually need FCM.
 export async function requestFcmToken(): Promise<string | null> {
   try {
+    if (typeof Notification === 'undefined') return null;
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return null;
 

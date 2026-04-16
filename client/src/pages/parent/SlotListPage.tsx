@@ -25,7 +25,7 @@ export default function SlotListPage() {
     if (!parentId) return;
 
     // Silently refresh FCM token if permission already granted
-    if (Notification.permission === 'granted') {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       requestFcmToken().then((token) => {
         if (token) {
           fetch(`/api/public/fcm-token/${parentId}`, {
