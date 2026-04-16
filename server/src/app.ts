@@ -20,7 +20,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/sessions', sessionsRoutes);
 app.use('/api/bookings', bookingsRoutes);
-app.use('/api', notificationsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 app.use('/api/invites', invitesRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/waitlist', waitlistRoutes);
