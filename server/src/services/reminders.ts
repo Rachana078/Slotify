@@ -9,7 +9,7 @@ export function startReminderScheduler(): void {
   console.log('Reminder scheduler started');
 }
 
-async function sendDueReminders(): Promise<void> {
+export async function sendDueReminders(): Promise<void> {
   const now = new Date();
   const windowStart = new Date(now.getTime() + 23.5 * 60 * 60 * 1000).toISOString();
   const windowEnd = new Date(now.getTime() + 24.5 * 60 * 60 * 1000).toISOString();
