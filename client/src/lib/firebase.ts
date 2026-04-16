@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage, type Messaging } from 'firebase/messaging';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -10,9 +10,19 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const messaging = getMessaging(app);
+
+// getMessaging() throws on iOS Safari (no web push support outside PWA mode)
+let messaging: Messaging | null = null;
+try {
+  messaging = getMessaging(app);
+} catch (e) {
+  console.warn('Firebase Messaging not supported in this browser:', e);
+}
+
+export { messaging };
 
 export async function requestFcmToken(): Promise<string | null> {
+  if (!messaging) return null;
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return null;

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { requestFcmToken } from '../../lib/firebase';
 import { useParent } from '../../hooks/useParent';
 
-type Step = 'loading' | 'form' | 'error';
+type Step = 'loading' | 'form' | 'success' | 'error';
 
 export default function JoinPage() {
   const { coachId } = useParams<{ coachId: string }>();
@@ -66,7 +66,20 @@ export default function JoinPage() {
     }
 
     saveParent(body.parentId);
-    navigate('/slots', { replace: true });
+    setStep('success');
+    setTimeout(() => navigate('/slots', { replace: true }), 2500);
+  }
+
+  if (step === 'success') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-md p-8 max-w-sm w-full text-center">
+          <div className="text-4xl mb-4">✅</div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">You're all set!</h2>
+          <p className="text-sm text-gray-500">You'll get a notification when new slots open. Taking you to available slots…</p>
+        </div>
+      </div>
+    );
   }
 
   if (step === 'loading') {

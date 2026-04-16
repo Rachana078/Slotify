@@ -25,6 +25,8 @@ export function useFCM(enabled: boolean) {
 
     setup();
 
+    if (!messaging) return;
+
     const unsubscribe = onMessage(messaging, (payload) => {
       const { title, body } = payload.notification ?? {};
       if (title) {
