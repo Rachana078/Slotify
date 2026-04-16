@@ -11,8 +11,8 @@ export function startReminderScheduler(): void {
 
 export async function sendDueReminders(): Promise<void> {
   const now = new Date();
-  const windowStart = new Date(now.getTime() + 23.5 * 60 * 60 * 1000).toISOString();
-  const windowEnd = new Date(now.getTime() + 24.5 * 60 * 60 * 1000).toISOString();
+  const windowStart = new Date(now.getTime() + 21 * 60 * 60 * 1000).toISOString();
+  const windowEnd = new Date(now.getTime() + 27 * 60 * 60 * 1000).toISOString();
 
   // Get sessions in window not already reminded
   const { data: loggedIds } = await supabaseAdmin
