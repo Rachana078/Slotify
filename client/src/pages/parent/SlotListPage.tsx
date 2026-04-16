@@ -20,6 +20,9 @@ export default function SlotListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [notifPermission, setNotifPermission] = useState(() =>
+    typeof Notification !== 'undefined' ? Notification.permission : 'denied'
+  );
 
   useEffect(() => {
     if (!parentId) return;
@@ -46,6 +49,20 @@ export default function SlotListPage() {
     }
     load();
   }, [parentId]);
+
+  async function enableNotifications() {
+    const token = await requestFcmToken();
+    if (token && parentId) {
+      await fetch(`/api/public/fcm-token/${parentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fcmToken: token }),
+      }).catch(() => {});
+    }
+    if (typeof Notification !== 'undefined') {
+      setNotifPermission(Notification.permission);
+    }
+  }
 
   async function joinWaitlist(sessionId: string) {
     setActionLoading(sessionId);
@@ -88,6 +105,15 @@ export default function SlotListPage() {
           My bookings
         </button>
       </header>
+
+      {notifPermission === 'default' && typeof Notification !== 'undefined' && (
+        <div className="bg-indigo-50 border-b border-indigo-100 px-4 py-3 flex items-center justify-between">
+          <p className="text-sm text-indigo-700">Enable notifications to hear about new slots</p>
+          <button onClick={enableNotifications} className="text-sm font-medium text-indigo-600 underline ml-3">
+            Enable
+          </button>
+        </div>
+      )}
 
       <div className="px-4 py-6 max-w-lg mx-auto space-y-3">
         {loading && <p className="text-center text-gray-400">Loading slots…</p>}
