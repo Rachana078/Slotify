@@ -152,12 +152,13 @@ export default function DashboardPage() {
                   {weekDays.map((day) => {
                     const slots = sessionsForDayHour(day, hour);
                     return (
-                      <td key={day.toISOString()} className="border-r border-b align-top p-1">
+                      <td key={day.toISOString()} className="border-r border-b p-1 h-16">
+                        <div className="flex flex-col gap-0.5 h-full">
                         {slots.map((s) => (
                           <button
                             key={s.id}
                             onClick={() => setSelected(s)}
-                            className={`w-full text-left rounded px-1 py-0.5 border mb-1 ${sessionColor(s.status)} hover:opacity-80 transition`}
+                            className={`w-full flex-1 text-left rounded px-1 py-0.5 border ${sessionColor(s.status)} hover:opacity-80 transition`}
                           >
                             <div className="font-medium">
                               {format(parseISO(s.start_time), 'h:mm a')}
@@ -167,6 +168,7 @@ export default function DashboardPage() {
                             )}
                           </button>
                         ))}
+                        </div>
                       </td>
                     );
                   })}
