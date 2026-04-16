@@ -23,12 +23,13 @@ function sessionColor(status: Session['status']) {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 0 }));
-  const { sessions, loading } = useSessions({
+  const { sessions, loading, setSessions } = useSessions({
     date_from: weekStart.toISOString(),
     date_to: addDays(weekStart, 7).toISOString(),
   });
   const [selected, setSelected] = useState<Session | null>(null);
   const [showQR, setShowQR] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { user } = useAuth();
 
   useFCM(true);
@@ -222,21 +223,27 @@ export default function DashboardPage() {
                 </div>
               )}
             </dl>
-            {selected.status === 'booked' && (
+            {(selected.status === 'open' || selected.status === 'booked') && (
               <button
+                disabled={deleting}
                 onClick={async () => {
+                  setDeleting(true);
                   const { data: { session: auth } } = await supabase.auth.getSession();
-                  if (!auth) return;
-                  await fetch(`/api/sessions/${selected.id}`, {
+                  if (!auth) { setDeleting(false); return; }
+                  const res = await fetch(`/api/sessions/${selected.id}`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.access_token}` },
                     body: JSON.stringify({}),
                   });
+                  if (res.ok) {
+                    setSessions((prev) => prev.filter((s) => s.id !== selected.id));
+                  }
                   setSelected(null);
+                  setDeleting(false);
                 }}
-                className="mt-4 w-full border border-red-300 text-red-600 rounded-lg py-2 text-sm hover:bg-red-50 transition"
+                className="mt-4 w-full border border-red-300 text-red-600 rounded-lg py-2 text-sm hover:bg-red-50 disabled:opacity-50 transition"
               >
-                Cancel session
+                {deleting ? 'Deleting…' : selected.status === 'booked' ? 'Cancel session' : 'Delete slot'}
               </button>
             )}
             <button

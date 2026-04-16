@@ -77,7 +77,16 @@ router.delete('/:sessionId', requireAuth, async (req: Request, res: Response) =>
     .single();
 
   if (!session) { res.status(404).json({ error: 'Session not found' }); return; }
-  if (session.status !== 'booked') { res.status(400).json({ error: 'Only booked sessions can be cancelled' }); return; }
+  if (!['open', 'booked'].includes(session.status)) { res.status(400).json({ error: 'Session cannot be deleted' }); return; }
+
+  // Open slots: just hard-delete, no notification needed
+  if (session.status === 'open') {
+    if (user.role === 'coach' && session.coach_id !== user.id) {
+      res.status(403).json({ error: 'Not your session' }); return;
+    }
+    await supabaseAdmin.from('sessions').delete().eq('id', sessionId);
+    res.json({ ok: true }); return;
+  }
 
   if (user.role === 'parent' && session.booked_parent_id !== user.id) {
     res.status(403).json({ error: 'Not your booking' }); return;
