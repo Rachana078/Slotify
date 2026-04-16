@@ -223,7 +223,7 @@ export default function DashboardPage() {
                 </div>
               )}
             </dl>
-            {(selected.status === 'open' || selected.status === 'booked') && (
+            {selected.status !== 'cancelled' && selected.status !== 'blocked' && (
               <button
                 disabled={deleting}
                 onClick={async () => {
