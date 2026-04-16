@@ -9,11 +9,18 @@ interface SessionInfo {
   end_time: string;
 }
 
+interface Student {
+  id: string;
+  name: string;
+}
+
 export default function BookingConfirmPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const { parentId } = useParent();
   const [session, setSession] = useState<SessionInfo | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState('');
@@ -22,11 +29,19 @@ export default function BookingConfirmPage() {
   useEffect(() => {
     if (!parentId) return;
     async function load() {
-      const res = await fetch(`/api/public/slots/${parentId}`);
-      if (res.ok) {
-        const data = await res.json();
+      const [slotsRes, studentsRes] = await Promise.all([
+        fetch(`/api/public/slots/${parentId}`),
+        fetch(`/api/public/students/${parentId}`),
+      ]);
+      if (slotsRes.ok) {
+        const data = await slotsRes.json();
         const found = (data.sessions ?? []).find((s: SessionInfo) => s.id === sessionId);
         setSession(found ?? null);
+      }
+      if (studentsRes.ok) {
+        const data = await studentsRes.json();
+        setStudents(data.students ?? []);
+        if (data.students?.length === 1) setSelectedStudentId(data.students[0].id);
       }
       setLoading(false);
     }
@@ -35,13 +50,17 @@ export default function BookingConfirmPage() {
 
   async function handleBook() {
     if (!parentId) return;
+    if (students.length > 1 && !selectedStudentId) {
+      setError('Please select which child this booking is for.');
+      return;
+    }
     setBooking(true);
     setError('');
 
     const res = await fetch(`/api/public/book/${sessionId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ parentId }),
+      body: JSON.stringify({ parentId, studentId: selectedStudentId || undefined }),
     });
 
     const body = await res.json();
@@ -109,6 +128,36 @@ export default function BookingConfirmPage() {
             <p className="text-sm text-red-500 mb-6">
               This slot is no longer available.
             </p>
+          )}
+
+          {students.length > 1 && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Which child is this for?
+              </label>
+              <div className="space-y-2">
+                {students.map((s) => (
+                  <label
+                    key={s.id}
+                    className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition ${
+                      selectedStudentId === s.id
+                        ? 'border-primary-600 bg-primary-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="student"
+                      value={s.id}
+                      checked={selectedStudentId === s.id}
+                      onChange={() => setSelectedStudentId(s.id)}
+                      className="accent-primary-600"
+                    />
+                    <span className="text-sm font-medium text-gray-800">{s.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           )}
 
           {error && <p className="text-red-500 text-sm mb-4">{error}</p>}

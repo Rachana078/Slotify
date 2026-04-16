@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { setupForegroundMessaging } from '../lib/firebase';
+import { requestFcmToken, setupForegroundMessaging } from '../lib/firebase';
 
 export function useFCM(enabled: boolean) {
   useEffect(() => {
@@ -10,7 +10,20 @@ export function useFCM(enabled: boolean) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Set up foreground notifications (no-op if FCM not supported)
+      // Request permission + save token so server can push to this coach
+      const token = await requestFcmToken();
+      if (token) {
+        fetch('/api/notifications/fcm-tokens', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ token }),
+        }).catch(console.error);
+      }
+
+      // Set up foreground notifications (shows banner when app is open)
       const unsub = await setupForegroundMessaging((title, body) => {
         if (typeof Notification !== 'undefined') {
           new Notification(title, { body, icon: '/icons/icon-192.png' });

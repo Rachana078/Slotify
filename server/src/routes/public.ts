@@ -114,10 +114,22 @@ router.get('/slots/:parentId', async (req: Request, res: Response) => {
   res.json({ sessions: annotated });
 });
 
+// GET /api/public/students/:parentId — list students for a parent
+router.get('/students/:parentId', async (req: Request, res: Response) => {
+  const { parentId } = req.params;
+  const { data: parent } = await supabaseAdmin.from('parents').select('id').eq('id', parentId).single();
+  if (!parent) { res.status(404).json({ error: 'Parent not found' }); return; }
+
+  const { data: students, error } = await supabaseAdmin
+    .from('students').select('id, name').eq('parent_id', parentId).order('name');
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ students: students ?? [] });
+});
+
 // POST /api/public/book/:sessionId
 router.post('/book/:sessionId', async (req: Request, res: Response) => {
   const { sessionId } = req.params;
-  const { parentId } = req.body;
+  const { parentId, studentId } = req.body;
   if (!parentId) { res.status(400).json({ error: 'parentId is required' }); return; }
 
   const { data: parent, error: parentError } = await supabaseAdmin
@@ -125,10 +137,12 @@ router.post('/book/:sessionId', async (req: Request, res: Response) => {
   if (parentError || !parent) { res.status(404).json({ error: 'Parent not found' }); return; }
 
   const { data: students } = await supabaseAdmin
-    .from('students').select('id, name').eq('parent_id', parentId).limit(1);
+    .from('students').select('id, name').eq('parent_id', parentId);
   if (!students?.length) { res.status(400).json({ error: 'No students found for this parent' }); return; }
 
-  const student = students[0];
+  // Use provided studentId, or auto-select if only one child
+  let student = students.find(s => s.id === studentId) ?? (students.length === 1 ? students[0] : null);
+  if (!student) { res.status(400).json({ error: 'studentId is required when parent has multiple children' }); return; }
 
   const { data: updated, error: updateError } = await supabaseAdmin
     .from('sessions')
