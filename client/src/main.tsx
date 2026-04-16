@@ -12,6 +12,7 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
         <div className="min-h-screen flex items-center justify-center px-4 bg-gray-50">
           <div className="text-center max-w-sm">
             <p className="text-lg font-semibold text-gray-800 mb-2">Something went wrong</p>
+            <p className="text-sm text-red-500 mb-2 break-all">{String(this.state.error)}</p>
             <p className="text-sm text-gray-500">Please refresh the page. If the problem persists, clear your browser data.</p>
           </div>
         </div>
